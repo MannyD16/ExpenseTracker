@@ -1,6 +1,5 @@
 import SwiftUI
 import CoreData
-import UniformTypeIdentifiers
 
 struct ContentView: View {
     @Environment(\.managedObjectContext) private var viewContext
@@ -16,6 +15,9 @@ struct ContentView: View {
     @State private var sortOption: String = "Newest First"
     @State private var showShareSheet = false
     @State private var csvFileURL: URL?
+
+    @AppStorage("monthlyBudget") private var monthlyBudget: Double = 500.0
+    @State private var showBudgetAlert = false
 
     let categories = ["All", "Food", "Transport", "Entertainment", "Other"]
     let sortOptions = ["Newest First", "Oldest First", "Highest Amount", "Lowest Amount"]
@@ -37,6 +39,10 @@ struct ContentView: View {
         }
     }
 
+    var budgetProgress: Double {
+        min(totalSpent / monthlyBudget, 1.0)
+    }
+
     var body: some View {
         ZStack {
             // Gradient Background
@@ -45,16 +51,28 @@ struct ContentView: View {
 
             NavigationView {
                 VStack {
-                    // Total Spent Section
+                    // 🔹 Budget Section
                     VStack {
-                        Text("Total Spent")
+                        Text("Monthly Budget: $\(monthlyBudget, specifier: "%.2f")")
                             .font(.headline)
-                            .foregroundColor(.gray)
-
-                        Text("$\(totalSpent, specifier: "%.2f")")
-                            .font(.largeTitle)
-                            .fontWeight(.bold)
                             .foregroundColor(.white)
+                        
+                        ProgressView(value: budgetProgress)
+                            .progressViewStyle(LinearProgressViewStyle())
+                            .frame(width: 250)
+                            .padding()
+
+                        Text("Spent: $\(totalSpent, specifier: "%.2f")")
+                            .font(.headline)
+                            .foregroundColor(totalSpent > monthlyBudget ? .red : .white)
+
+                        Button("Set Budget") {
+                            showBudgetAlert = true
+                        }
+                        .padding()
+                        .background(Color.white)
+                        .foregroundColor(.blue)
+                        .cornerRadius(10)
                     }
                     .padding()
                     .background(RoundedRectangle(cornerRadius: 15).fill(Color.white.opacity(0.2)))
@@ -153,11 +171,10 @@ struct ContentView: View {
                     calculateTotalSpent()
                     refreshTrigger.toggle()
                 }
-                .sheet(isPresented: $showShareSheet, content: {
-                    if let csvFileURL = csvFileURL {
-                        ActivityViewController(activityItems: [csvFileURL])
-                    }
-                })
+                .alert("Set Monthly Budget", isPresented: $showBudgetAlert) {
+                    TextField("Enter Budget", value: $monthlyBudget, formatter: NumberFormatter())
+                    Button("OK", role: .cancel) {}
+                }
             }
         }
     }
@@ -205,18 +222,6 @@ struct ContentView: View {
     private func calculateTotalSpent() {
         totalSpent = expenses.reduce(0) { $0 + $1.amount }
     }
-}
-
-// UIKit Activity View Controller for sharing files
-struct ActivityViewController: UIViewControllerRepresentable {
-    var activityItems: [Any]
-    var applicationActivities: [UIActivity]? = nil
-
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: activityItems, applicationActivities: applicationActivities)
-    }
-
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 struct ContentView_Previews: PreviewProvider {
