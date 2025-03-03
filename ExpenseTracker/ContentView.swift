@@ -11,6 +11,17 @@ struct ContentView: View {
     @State private var showAddExpense = false
     @State private var totalSpent: Double = 0.0
     @State private var refreshTrigger = false
+    @State private var selectedCategory: String = "All"
+
+    let categories = ["All", "Food", "Transport", "Entertainment", "Other"]
+
+    var filteredExpenses: [Expense] {
+        if selectedCategory == "All" {
+            return Array(expenses)
+        } else {
+            return expenses.filter { $0.category == selectedCategory }
+        }
+    }
 
     var body: some View {
         ZStack {
@@ -36,31 +47,38 @@ struct ContentView: View {
                     .shadow(radius: 5)
                     .padding(.horizontal)
 
+                    // ✅ Category Filter
+                    Picker("Filter by Category", selection: $selectedCategory) {
+                        ForEach(categories, id: \.self) { category in
+                            Text(category)
+                        }
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
+                    .padding(.horizontal)
+
                     // Expense List
                     List {
-                        ForEach(expenses) { expense in
+                        ForEach(filteredExpenses) { expense in
                             ZStack {
-                                // ✅ Updated darker card color for better contrast
                                 RoundedRectangle(cornerRadius: 15)
                                     .fill(Color.black.opacity(0.3))
                                     .shadow(radius: 5)
 
                                 VStack(alignment: .leading, spacing: 5) {
-                                    // ✅ Updated text color for better readability
                                     Text(expense.name ?? "Unknown Expense")
                                         .font(.headline)
                                         .fontWeight(.bold)
-                                        .foregroundColor(.white) // White text for high visibility
+                                        .foregroundColor(.white)
                                     
                                     Text("$\(expense.amount, specifier: "%.2f")")
                                         .font(.title2)
                                         .fontWeight(.bold)
-                                        .foregroundColor(.green) // Bright green for visibility
+                                        .foregroundColor(.green)
                                     
                                     Text(expense.category ?? "Other")
                                         .font(.caption)
                                         .fontWeight(.bold)
-                                        .foregroundColor(.blue) // Bright blue for better contrast
+                                        .foregroundColor(.blue)
                                 }
                                 .padding()
                             }
@@ -78,8 +96,8 @@ struct ContentView: View {
                             .font(.title2)
                             .padding()
                             .frame(maxWidth: .infinity)
-                            .background(Color.white) // White button for contrast
-                            .foregroundColor(.blue)  // Blue text for visibility
+                            .background(Color.white)
+                            .foregroundColor(.blue)
                             .cornerRadius(10)
                             .shadow(radius: 5)
                     }
@@ -95,7 +113,7 @@ struct ContentView: View {
                 }
                 .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ExpenseAdded"))) { _ in
                     calculateTotalSpent()
-                    refreshTrigger.toggle() // ✅ Forces UI refresh
+                    refreshTrigger.toggle()
                 }
             }
         }
@@ -106,7 +124,7 @@ struct ContentView: View {
             viewContext.delete(expenses[index])
         }
         saveContext()
-        calculateTotalSpent() // ✅ Update total when deleting an expense
+        calculateTotalSpent()
     }
 
     private func saveContext() {
