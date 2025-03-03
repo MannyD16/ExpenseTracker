@@ -12,21 +12,32 @@ struct ContentView: View {
     @State private var totalSpent: Double = 0.0
     @State private var refreshTrigger = false
     @State private var selectedCategory: String = "All"
+    @State private var sortOption: String = "Newest First"
 
     let categories = ["All", "Food", "Transport", "Entertainment", "Other"]
+    let sortOptions = ["Newest First", "Oldest First", "Highest Amount", "Lowest Amount"]
 
-    var filteredExpenses: [Expense] {
-        if selectedCategory == "All" {
-            return Array(expenses)
-        } else {
-            return expenses.filter { $0.category == selectedCategory }
+    var filteredAndSortedExpenses: [Expense] {
+        var filtered = selectedCategory == "All" ? Array(expenses) : expenses.filter { $0.category == selectedCategory }
+
+        switch sortOption {
+        case "Newest First":
+            return filtered.sorted { $0.date ?? Date() > $1.date ?? Date() }
+        case "Oldest First":
+            return filtered.sorted { $0.date ?? Date() < $1.date ?? Date() }
+        case "Highest Amount":
+            return filtered.sorted { $0.amount > $1.amount }
+        case "Lowest Amount":
+            return filtered.sorted { $0.amount < $1.amount }
+        default:
+            return filtered
         }
     }
 
     var body: some View {
         ZStack {
-            // Gradient Background
-            LinearGradient(gradient: Gradient(colors: [Color.blue, Color.purple]), startPoint: .top, endPoint: .bottom)
+            // ✅ Adaptive Background
+            Color(UIColor.systemBackground)
                 .edgesIgnoringSafeArea(.all)
 
             NavigationView {
@@ -35,15 +46,15 @@ struct ContentView: View {
                     VStack {
                         Text("Total Spent")
                             .font(.headline)
-                            .foregroundColor(.gray)
+                            .foregroundColor(Color(UIColor.secondaryLabel)) // ✅ Adjusts in Dark Mode
 
                         Text("$\(totalSpent, specifier: "%.2f")")
                             .font(.largeTitle)
                             .fontWeight(.bold)
-                            .foregroundColor(.white)
+                            .foregroundColor(.primary) // ✅ Adjusts automatically
                     }
                     .padding()
-                    .background(RoundedRectangle(cornerRadius: 15).fill(Color.white.opacity(0.2)))
+                    .background(RoundedRectangle(cornerRadius: 15).fill(Color(UIColor.secondarySystemBackground)))
                     .shadow(radius: 5)
                     .padding(.horizontal)
 
@@ -56,25 +67,34 @@ struct ContentView: View {
                     .pickerStyle(SegmentedPickerStyle())
                     .padding(.horizontal)
 
+                    // ✅ Sorting Options
+                    Picker("Sort By", selection: $sortOption) {
+                        ForEach(sortOptions, id: \.self) { option in
+                            Text(option)
+                        }
+                    }
+                    .pickerStyle(MenuPickerStyle())
+                    .padding(.horizontal)
+
                     // Expense List
                     List {
-                        ForEach(filteredExpenses) { expense in
+                        ForEach(filteredAndSortedExpenses) { expense in
                             ZStack {
                                 RoundedRectangle(cornerRadius: 15)
-                                    .fill(Color.black.opacity(0.3))
+                                    .fill(Color(UIColor.tertiarySystemBackground)) // ✅ Adjusts for Dark Mode
                                     .shadow(radius: 5)
 
                                 VStack(alignment: .leading, spacing: 5) {
                                     Text(expense.name ?? "Unknown Expense")
                                         .font(.headline)
                                         .fontWeight(.bold)
-                                        .foregroundColor(.white)
-                                    
+                                        .foregroundColor(.primary) // ✅ Adjusts automatically
+
                                     Text("$\(expense.amount, specifier: "%.2f")")
                                         .font(.title2)
                                         .fontWeight(.bold)
                                         .foregroundColor(.green)
-                                    
+
                                     Text(expense.category ?? "Other")
                                         .font(.caption)
                                         .fontWeight(.bold)
@@ -96,8 +116,8 @@ struct ContentView: View {
                             .font(.title2)
                             .padding()
                             .frame(maxWidth: .infinity)
-                            .background(Color.white)
-                            .foregroundColor(.blue)
+                            .background(Color(UIColor.systemBlue)) // ✅ Adaptive button color
+                            .foregroundColor(.white)
                             .cornerRadius(10)
                             .shadow(radius: 5)
                     }
