@@ -1,5 +1,6 @@
 import SwiftUI
 import CoreData
+import UniformTypeIdentifiers
 
 struct ContentView: View {
     @Environment(\.managedObjectContext) private var viewContext
@@ -13,6 +14,8 @@ struct ContentView: View {
     @State private var refreshTrigger = false
     @State private var selectedCategory: String = "All"
     @State private var sortOption: String = "Newest First"
+    @State private var showShareSheet = false
+    @State private var csvFileURL: URL?
 
     let categories = ["All", "Food", "Transport", "Entertainment", "Other"]
     let sortOptions = ["Newest First", "Oldest First", "Highest Amount", "Lowest Amount"]
@@ -36,8 +39,8 @@ struct ContentView: View {
 
     var body: some View {
         ZStack {
-            // ✅ Adaptive Background
-            Color(UIColor.systemBackground)
+            // Gradient Background
+            LinearGradient(gradient: Gradient(colors: [Color.blue, Color.purple]), startPoint: .top, endPoint: .bottom)
                 .edgesIgnoringSafeArea(.all)
 
             NavigationView {
@@ -46,19 +49,19 @@ struct ContentView: View {
                     VStack {
                         Text("Total Spent")
                             .font(.headline)
-                            .foregroundColor(Color(UIColor.secondaryLabel)) // ✅ Adjusts in Dark Mode
+                            .foregroundColor(.gray)
 
                         Text("$\(totalSpent, specifier: "%.2f")")
                             .font(.largeTitle)
                             .fontWeight(.bold)
-                            .foregroundColor(.primary) // ✅ Adjusts automatically
+                            .foregroundColor(.white)
                     }
                     .padding()
-                    .background(RoundedRectangle(cornerRadius: 15).fill(Color(UIColor.secondarySystemBackground)))
+                    .background(RoundedRectangle(cornerRadius: 15).fill(Color.white.opacity(0.2)))
                     .shadow(radius: 5)
                     .padding(.horizontal)
 
-                    // ✅ Category Filter
+                    // Category Filter
                     Picker("Filter by Category", selection: $selectedCategory) {
                         ForEach(categories, id: \.self) { category in
                             Text(category)
@@ -67,7 +70,7 @@ struct ContentView: View {
                     .pickerStyle(SegmentedPickerStyle())
                     .padding(.horizontal)
 
-                    // ✅ Sorting Options
+                    // Sorting Options
                     Picker("Sort By", selection: $sortOption) {
                         ForEach(sortOptions, id: \.self) { option in
                             Text(option)
@@ -81,20 +84,20 @@ struct ContentView: View {
                         ForEach(filteredAndSortedExpenses) { expense in
                             ZStack {
                                 RoundedRectangle(cornerRadius: 15)
-                                    .fill(Color(UIColor.tertiarySystemBackground)) // ✅ Adjusts for Dark Mode
+                                    .fill(Color.black.opacity(0.3))
                                     .shadow(radius: 5)
 
                                 VStack(alignment: .leading, spacing: 5) {
                                     Text(expense.name ?? "Unknown Expense")
                                         .font(.headline)
                                         .fontWeight(.bold)
-                                        .foregroundColor(.primary) // ✅ Adjusts automatically
-
+                                        .foregroundColor(.white)
+                                    
                                     Text("$\(expense.amount, specifier: "%.2f")")
                                         .font(.title2)
                                         .fontWeight(.bold)
                                         .foregroundColor(.green)
-
+                                    
                                     Text(expense.category ?? "Other")
                                         .font(.caption)
                                         .fontWeight(.bold)
@@ -108,6 +111,21 @@ struct ContentView: View {
                     }
                     .listStyle(PlainListStyle())
 
+                    // Export CSV Button
+                    Button(action: {
+                        exportCSV()
+                    }) {
+                        Text("Export Expenses as CSV")
+                            .font(.title2)
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(Color.white)
+                            .foregroundColor(.blue)
+                            .cornerRadius(10)
+                            .shadow(radius: 5)
+                    }
+                    .padding(.horizontal)
+
                     // Add Expense Button
                     Button(action: {
                         showAddExpense = true
@@ -116,8 +134,8 @@ struct ContentView: View {
                             .font(.title2)
                             .padding()
                             .frame(maxWidth: .infinity)
-                            .background(Color(UIColor.systemBlue)) // ✅ Adaptive button color
-                            .foregroundColor(.white)
+                            .background(Color.white)
+                            .foregroundColor(.blue)
                             .cornerRadius(10)
                             .shadow(radius: 5)
                     }
@@ -135,7 +153,36 @@ struct ContentView: View {
                     calculateTotalSpent()
                     refreshTrigger.toggle()
                 }
+                .sheet(isPresented: $showShareSheet, content: {
+                    if let csvFileURL = csvFileURL {
+                        ActivityViewController(activityItems: [csvFileURL])
+                    }
+                })
             }
+        }
+    }
+
+    private func exportCSV() {
+        let fileName = "Expenses.csv"
+        let path = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
+
+        var csvText = "Name,Amount,Category,Date\n"
+
+        for expense in expenses {
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd"
+            let dateString = dateFormatter.string(from: expense.date ?? Date())
+
+            let line = "\(expense.name ?? "Unknown"),\(expense.amount),\(expense.category ?? "Other"),\(dateString)\n"
+            csvText.append(line)
+        }
+
+        do {
+            try csvText.write(to: path, atomically: true, encoding: .utf8)
+            self.csvFileURL = path
+            self.showShareSheet = true
+        } catch {
+            print("Failed to create CSV file: \(error.localizedDescription)")
         }
     }
 
@@ -158,6 +205,18 @@ struct ContentView: View {
     private func calculateTotalSpent() {
         totalSpent = expenses.reduce(0) { $0 + $1.amount }
     }
+}
+
+// UIKit Activity View Controller for sharing files
+struct ActivityViewController: UIViewControllerRepresentable {
+    var activityItems: [Any]
+    var applicationActivities: [UIActivity]? = nil
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: activityItems, applicationActivities: applicationActivities)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 struct ContentView_Previews: PreviewProvider {
