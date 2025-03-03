@@ -54,11 +54,17 @@ struct AddExpenseView: View {
         newExpense.category = category
         newExpense.date = Date()
         
-        do {
-            try viewContext.save()
-            presentationMode.wrappedValue.dismiss()
-        } catch {
-            print("Failed to save: \(error.localizedDescription)")
+        withAnimation {
+            do {
+                try viewContext.save()  // ✅ Ensures data is saved properly
+                
+                DispatchQueue.main.async {
+                    NotificationCenter.default.post(name: NSNotification.Name("ExpenseAdded"), object: nil)
+                    presentationMode.wrappedValue.dismiss()
+                }
+            } catch {
+                print("Failed to save: \(error.localizedDescription)")
+            }
         }
     }
 }
