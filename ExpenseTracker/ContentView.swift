@@ -18,6 +18,7 @@ struct ContentView: View {
 
     @AppStorage("monthlyBudget") private var monthlyBudget: Double = 500.0
     @State private var showBudgetAlert = false
+    @State private var newBudgetAmount: String = ""
 
     let categories = ["All", "Food", "Transport", "Entertainment", "Other"]
     let sortOptions = ["Newest First", "Oldest First", "Highest Amount", "Lowest Amount"]
@@ -66,7 +67,8 @@ struct ContentView: View {
                             .font(.headline)
                             .foregroundColor(totalSpent > monthlyBudget ? .red : .white)
 
-                        Button("Set Budget") {
+                        Button("Edit Budget") {
+                            newBudgetAmount = String(format: "%.2f", monthlyBudget)
                             showBudgetAlert = true
                         }
                         .padding()
@@ -171,9 +173,16 @@ struct ContentView: View {
                     calculateTotalSpent()
                     refreshTrigger.toggle()
                 }
-                .alert("Set Monthly Budget", isPresented: $showBudgetAlert) {
-                    TextField("Enter Budget", value: $monthlyBudget, formatter: NumberFormatter())
-                    Button("OK", role: .cancel) {}
+                .alert("Edit Monthly Budget", isPresented: $showBudgetAlert) {
+                    TextField("Enter New Budget", text: $newBudgetAmount)
+                        .keyboardType(.decimalPad)
+                    
+                    Button("Save") {
+                        if let newAmount = Double(newBudgetAmount) {
+                            monthlyBudget = newAmount
+                        }
+                    }
+                    Button("Cancel", role: .cancel) {}
                 }
             }
         }
